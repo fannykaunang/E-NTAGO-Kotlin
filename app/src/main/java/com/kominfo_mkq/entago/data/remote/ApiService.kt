@@ -94,8 +94,10 @@ interface ApiService {
         @Body request: CheckoutRequest
     ): CheckoutResponse
 
+//    @GET("/api/checkin/today")
+//    suspend fun getTodayCheckin(): TodayCheckinResponse
     @GET("/api/checkin/today")
-    suspend fun getTodayCheckin(): TodayCheckinResponse
+    suspend fun getTodayCheckin(): Response<TodayCheckinResponse>
 
     @PUT("api/auth/change-password")
     suspend fun changePassword(

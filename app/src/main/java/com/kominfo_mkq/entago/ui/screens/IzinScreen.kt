@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
@@ -62,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.kominfo_mkq.entago.data.remote.response.IzinItem
+import com.kominfo_mkq.entago.ui.components.EmptyState
 import com.kominfo_mkq.entago.ui.viewmodel.IzinUiState
 import com.kominfo_mkq.entago.ui.viewmodel.IzinViewModel
 import java.text.SimpleDateFormat
@@ -211,8 +211,11 @@ fun IzinScreen(navController: NavHostController, viewModel: IzinViewModel, isDar
                     is IzinUiState.Success -> {
                         val dataTampil = viewModel.filteredData
                         if (dataTampil.isEmpty()) {
-                            EmptyState(isSearching = isSearching)
-                            //BEDAKAN EmptyState INI DENGAN TUGASLUAR, BIKIN AGAR EmptyState BISA DIPAKE DISEMUA HALAMAN
+                            EmptyState(
+                                isSearching = isSearching,
+                                title = "Belum Izin/Cuti",
+                                description = "Tekan tombol + di pojok bawah untuk membuat Izin/Cuti baru"
+                            )
                         } else {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),

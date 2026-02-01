@@ -106,13 +106,27 @@ class DashboardViewModel(
 
                     try {
                         val todayResponse = apiService.getTodayCheckin()
-                        if (todayResponse.success && todayResponse.data != null) {
-                            // Karena API sudah memberikan format "07:57", tidak perlu split lagi
-                            lastCheckin = todayResponse.data.checkin ?: "--:--"
-                            lastCheckout = todayResponse.data.checkout ?: "--:--"
+                        if (todayResponse.isSuccessful) {
+                            val body = todayResponse.body()
+                            if (body?.success == true && body.data != null) {
+                                // Data ada (User sudah absen)
+                                lastCheckin = body.data.checkin ?: "--:--"
+                                lastCheckout = body.data.checkout ?: "--:--"
+                            } else {
+                                // Berhasil konek, tapi success false (Kasus jarang)
+                                lastCheckin = "--:--"
+                                lastCheckout = "--:--"
+                            }
+                        } else if (todayResponse.code() == 404) {
+                            // KHUSUS TANGGAL 1: Server merespon 404 (Belum ada data)
+                            android.util.Log.d("ABSEN_INFO", "User belum absen hari ini (404)")
+                            lastCheckin = "--:--"
+                            lastCheckout = "--:--"
                         }
                     } catch (e: Exception) {
                         // Jika API today gagal, biarkan default --:--
+                        lastCheckin = "--:--"
+                        lastCheckout = "--:--"
                         android.util.Log.e("API_ERROR", "Gagal load today status: ${e.message}")
                     }
 

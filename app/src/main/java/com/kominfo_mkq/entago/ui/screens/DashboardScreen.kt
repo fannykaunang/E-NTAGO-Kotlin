@@ -41,9 +41,7 @@ import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Assessment
-import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Dns
@@ -307,15 +305,16 @@ fun DashboardScreen(
                     .offset(y = (-30).dp)
             ) {
                 AttendanceSummaryCards(
-                    attendancePercent = riwayatViewModel.attendancePercentage.ifEmpty { "-" },
-                    workingHours = riwayatViewModel.totalWorkHours.ifEmpty { "-" }
+                    attendancePercent = riwayatViewModel.attendancePercentage ?: "-",
+                    workingHours = riwayatViewModel.totalWorkHours ?: "-"
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 QuickStatsRow(
-                    checkin = if (viewModel.lastCheckin.isEmpty()) "--:--" else viewModel.lastCheckin,
-                    checkout = if (viewModel.lastCheckout.isEmpty()) "--:--" else viewModel.lastCheckout
+                    // Gunakan isNullOrEmpty() agar jika NULL tidak crash
+                    checkin = if (viewModel.lastCheckin.isNullOrEmpty()) "--:--" else viewModel.lastCheckin,
+                    checkout = if (viewModel.lastCheckout.isNullOrEmpty()) "--:--" else viewModel.lastCheckout
                 )
 
 //                Spacer(modifier = Modifier.height(16.dp))
@@ -387,12 +386,10 @@ fun MoreMenuSheetContent(
             text = "Menu Lainnya",
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
-            // Judul juga mengikuti tema otomatis
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(bottom = 20.dp, start = 8.dp)
         )
 
-        // Anda bisa mengisi grid menu tambahan di sini, contoh:
         val otherMenus = listOf(
             MenuItem("Status Mesin", Icons.Default.Dns),
             MenuItem("Pengaturan", Icons.Default.Settings),
@@ -401,44 +398,49 @@ fun MoreMenuSheetContent(
             MenuItem("Keluar", Icons.AutoMirrored.Filled.Logout)
         )
 
-        Row(modifier = Modifier.fillMaxWidth()) {
-            otherMenus.forEach { item ->
-                val isLogout = item.title == "Keluar"
-                val tintColor = if (isLogout) Color.Red else MaterialTheme.colorScheme.primary
+        val menuRows = otherMenus.chunked(4)
 
-                CompactMenuItem(
-                    item = item,
-                    iconColor = tintColor,
-                    onClick = {
-                        onDismiss()
-                        when (item.title) {
-                            "Status Mesin" -> navController.navigate("status_mesin")
-                            "Keluar" -> {
-                                prefManager.logout() // Gunakan logout() agar sidik jari tidak hilang
-                                navController.navigate("login") {
-                                    popUpTo(0) { inclusive = true }
+        menuRows.forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                rowItems.forEach { item ->
+                    val isLogout = item.title == "Keluar"
+                    val tintColor = if (isLogout) Color.Red else MaterialTheme.colorScheme.primary
+
+                    CompactMenuItem(
+                        item = item,
+                        iconColor = tintColor,
+                        onClick = {
+                            onDismiss()
+                            when (item.title) {
+                                "Status Mesin" -> navController.navigate("status_mesin")
+                                "Keluar" -> {
+                                    prefManager.logout()
+                                    navController.navigate("login") {
+                                        popUpTo(0) { inclusive = true }
+                                    }
                                 }
+                                "Pengaturan" -> navController.navigate("settings")
+                                "Hubungi IT" -> {
+                                    openWhatsApp(context, prefManager.getNama() ?: "-", prefManager.getSkpd() ?: "-", deviceId)
+                                }
+                                "Panduan" -> navController.navigate("panduan")
                             }
-                            "Pengaturan" -> {
-                                // Panggil route settings yang terdaftar di NavHost
-                                navController.navigate("settings")
-                            }
-                            "Hubungi IT" -> {
-                                openWhatsApp(
-                                    context = context,
-                                    nama = prefManager.getNama() ?: "-",
-                                    skpd = prefManager.getSkpd() ?: "-",
-                                    deviceId = deviceId
-                                )
-                            }
-                            "Panduan" -> {
-                                navController.navigate("panduan")
-                            }
-                        }
-                    },
-                    modifier = Modifier.weight(1f)
-                )
+                        },
+                        // PAKAI WEIGHT(1f): Supaya dibagi rata 25% per kolom
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                // KUNCI: Tambahkan Spacer kosong agar item tetap di kolomnya (tidak melebar)
+                // Jika di baris tersebut cuma ada 1 item, kita tambah 3 spacer kosong
+                repeat(4 - rowItems.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
             }
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

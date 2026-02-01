@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.kominfo_mkq.entago.data.remote.response.TugasLuarData
+import com.kominfo_mkq.entago.ui.components.EmptyState
 import com.kominfo_mkq.entago.ui.viewmodel.TugasLuarViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -171,7 +172,11 @@ fun TugasLuarScreen(navController: NavHostController, viewModel: TugasLuarViewMo
                     }
                 }
                 viewModel.filteredTugas.isEmpty() && !viewModel.isLoading -> {
-                    EmptyState(isSearching = isSearching)
+                    EmptyState(
+                        isSearching = isSearching,
+                        title = "Belum ada Tugas Luar",
+                        description = "Tekan tombol + di pojok bawah untuk menambah laporan baru"
+                    )
                 }
                 else -> {
                     LazyColumn(
@@ -188,40 +193,6 @@ fun TugasLuarScreen(navController: NavHostController, viewModel: TugasLuarViewMo
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun EmptyState(isSearching: Boolean) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)
-        ) {
-            Icon(
-                imageVector = if (isSearching) Icons.Default.Search else Icons.Default.CloudOff,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = if (isSearching) "Tidak ada hasil pencarian" else "Belum ada Tugas Luar",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = if (isSearching) "Coba kata kunci lain" else "Tekan tombol + untuk menambah Tugas",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
         }
     }
 }
