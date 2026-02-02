@@ -6,8 +6,10 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.messaging.FirebaseMessaging
 import com.kominfo_mkq.entago.data.local.PrefManager
 import com.kominfo_mkq.entago.data.remote.ApiService
+import com.kominfo_mkq.entago.data.remote.request.FcmTokenRequest
 import com.kominfo_mkq.entago.data.remote.request.LoginRequest
 import kotlinx.coroutines.launch
 
@@ -20,8 +22,31 @@ class LoginViewModel(
     var uiState by mutableStateOf<LoginUiState>(LoginUiState.Idle)
         private set
 
-    fun resetState() {
-        uiState = LoginUiState.Idle
+    //fun resetState() {
+    //    uiState = LoginUiState.Idle
+    //}
+
+    private fun updateFcmTokenToServer() {
+        // 1. Ambil token dari Firebase SDK
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                android.util.Log.w("FCM_DEBUG", "Gagal mengambil token Firebase", task.exception)
+                return@addOnCompleteListener
+            }
+
+            val token = task.result
+
+            viewModelScope.launch {
+                try {
+                    val response = apiService.updateFcmToken(FcmTokenRequest(token))
+                    if (response.isSuccessful) {
+                        android.util.Log.d("FCM_DEBUG", "FCM Token berhasil diperbarui di server")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("FCM_DEBUG", "Gagal update token: ${e.message}")
+                }
+            }
+        }
     }
 
     fun canUseBiometric(): Boolean {
@@ -69,9 +94,9 @@ class LoginViewModel(
                     )
                     uiState = LoginUiState.Success
 
-// Update fungsi login manual agar menyimpan kredensial jika sukses
-// ... di dalam login() setelah response.success ...
                     prefManager.saveBiometricCredentials(cleanEmail, cleanPassword)
+
+                    updateFcmTokenToServer()
                 } else {
                     uiState = LoginUiState.Error(response.message)
                 }

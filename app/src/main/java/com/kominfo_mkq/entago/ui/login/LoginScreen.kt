@@ -1,7 +1,12 @@
 package com.kominfo_mkq.entago.ui.login
 
+import android.Manifest
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricPrompt
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -70,6 +75,15 @@ fun LoginScreen(
     var showBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
 
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        // Apapun hasilnya (diterima atau ditolak), kita tetap lanjut ke Dashboard
+        navController.navigate("dashboard") {
+            popUpTo("login") { inclusive = true }
+        }
+    }
+
     // --- SETUP BIOMETRIC PROMPT ---
     val biometricPrompt = remember(activity) {
         activity?.let {
@@ -104,8 +118,27 @@ fun LoginScreen(
     LaunchedEffect(viewModel.uiState) {
         if (viewModel.uiState is LoginUiState.Success) {
             delay(200) // Jeda transisi halus
-            navController.navigate("dashboard") {
-                popUpTo("login") { inclusive = true }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val isPermissionGranted = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+
+                if (!isPermissionGranted) {
+                    // Jika belum ada izin, munculkan dialog izin
+                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    // Jika sudah ada izin, langsung navigasi
+                    navController.navigate("dashboard") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                }
+            } else {
+                // Untuk Android di bawah 13, tidak perlu izin runtime
+                navController.navigate("dashboard") {
+                    popUpTo("login") { inclusive = true }
+                }
             }
         }
     }
@@ -124,7 +157,6 @@ fun LoginScreen(
             biometricPrompt?.authenticate(promptInfo)
         }
     }
-
     Box(modifier = Modifier.fillMaxSize()) {
         // --- 1. BACKGROUND & FORM UTAMA ---
         val backgroundColors = if (MaterialTheme.colorScheme.background.luminance() > 0.5f) {

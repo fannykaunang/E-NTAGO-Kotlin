@@ -118,6 +118,12 @@ fun DashboardScreen(
 ) {
     val context = LocalContext.current
     val uiState = viewModel.uiState
+
+    //android.util.Log.d("DEBUG_NULL", "Checkin: ${viewModel.lastCheckin}")
+    //android.util.Log.d("DEBUG_NULL", "Checkout: ${viewModel.lastCheckout}")
+    //android.util.Log.d("DEBUG_NULL", "Persentase: ${riwayatViewModel.attendancePercentage}")
+    //android.util.Log.d("DEBUG_NULL", "Jam Kerja: ${riwayatViewModel.totalWorkHours}")
+
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
     var isCheckingLocation by remember { mutableStateOf(false) }
@@ -138,7 +144,7 @@ fun DashboardScreen(
 
     val (buttonText, inoutMode, isTimeValid) = when (hour) {
         in 6..9 -> Triple("PRESENSI DATANG", 1, true)
-        in 16..23 -> Triple("PRESENSI PULANG", 2, true)
+        in 16..18 -> Triple("PRESENSI PULANG", 2, true)
         else -> Triple("DI LUAR JAM ABSEN", -1, false)
     }
 
@@ -654,9 +660,11 @@ fun CompactHeader(
 
                 is DashboardUiState.Success -> {
                     val pegawai = uiState.data
+                    //android.util.Log.d("DEBUG_NULL", "Nama: ${pegawai.pegawai_nama}")
+                    //android.util.Log.d("DEBUG_NULL", "NIP: ${pegawai.pegawai_nip}")
                     Column {
                         Text(
-                            text = pegawai.pegawai_nama,
+                            text = pegawai.pegawai_nama ?: "-",
                             fontSize = 16.sp,
                             color = Color.White,
                             fontWeight = FontWeight.SemiBold,

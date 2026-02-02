@@ -25,8 +25,12 @@ class DashboardViewModel(
     var uiState by mutableStateOf<DashboardUiState>(DashboardUiState.Loading)
         private set
 
+    // ===== FIX: GUNAKAN NON-NULLABLE STRING DENGAN DEFAULT VALUE =====
     var lastCheckin by mutableStateOf("--:--")
+        private set
+
     var lastCheckout by mutableStateOf("--:--")
+        private set
 
     // State untuk Status Mesin
     var isLoading by mutableStateOf(false)
@@ -37,10 +41,9 @@ class DashboardViewModel(
     // Update fungsi refresh agar mencakup status mesin
     fun refreshAllData(riwayatViewModel: RiwayatViewModel, onFinished: () -> Unit) {
         viewModelScope.launch {
-            // Jalankan secara paralel agar lebih cepat
             val profileJob = launch { loadProfile() }
             val riwayatJob = launch { riwayatViewModel.fetchRiwayatData(refresh = true) }
-            val machineJob = launch { checkDeviceStatus() } // Tambahkan ini
+            val machineJob = launch { checkDeviceStatus() }
 
             profileJob.join()
             riwayatJob.join()
@@ -53,7 +56,6 @@ class DashboardViewModel(
     fun checkDeviceStatus() {
         val skpdId = prefManager.getSkpdid()
 
-        // 1. Log skpdid sebelum pemanggilan API
         android.util.Log.d("DEVICE_MONITOR", "Memulai pengecekan status. SKPD ID: $skpdId")
 
         if (skpdId == 0) {
@@ -68,17 +70,13 @@ class DashboardViewModel(
 
                 if (response.isSuccessful) {
                     val body = response.body()
-                    // 2. Log jumlah perangkat yang ditemukan
                     android.util.Log.i("DEVICE_MONITOR", "Sukses! Online: ${body?.online}, Offline: ${body?.offline}")
-
                     isMachineOnline = (body?.online ?: 0) > 0
                 } else {
-                    // 3. Log jika server memberikan error (misal 404 atau 500)
                     android.util.Log.w("DEVICE_MONITOR", "Server merespon dengan error: ${response.code()}")
                     isMachineOnline = false
                 }
             } catch (e: Exception) {
-                // 4. Log jika terjadi kesalahan jaringan/koneksi
                 android.util.Log.e("DEVICE_MONITOR", "Terjadi Exception: ${e.message}")
                 isMachineOnline = false
             } finally {
@@ -104,35 +102,42 @@ class DashboardViewModel(
                         skpd = response.data.skpd
                     )
 
+                    // ===== FIX: ROBUST NULL HANDLING =====
                     try {
                         val todayResponse = apiService.getTodayCheckin()
-                        if (todayResponse.isSuccessful) {
-                            val body = todayResponse.body()
-                            if (body?.success == true && body.data != null) {
-                                // Data ada (User sudah absen)
-                                lastCheckin = body.data.checkin ?: "--:--"
-                                lastCheckout = body.data.checkout ?: "--:--"
-                            } else {
-                                // Berhasil konek, tapi success false (Kasus jarang)
-                                lastCheckin = "--:--"
-                                lastCheckout = "--:--"
-                            }
-                        } else if (todayResponse.code() == 404) {
-                            // KHUSUS TANGGAL 1: Server merespon 404 (Belum ada data)
-                            android.util.Log.d("ABSEN_INFO", "User belum absen hari ini (404)")
+
+                        //android.util.Log.d("TODAY_CHECKIN", "Response: success=${todayResponse.success}, data=${todayResponse.data}")
+
+                        if (todayResponse.success && todayResponse.data != null) {
+                            // ✅ Safe assignment dengan fallback
+                            lastCheckin = todayResponse.data.checkin?.takeIf { it.isNotBlank() } ?: "--:--"
+                            lastCheckout = todayResponse.data.checkout?.takeIf { it.isNotBlank() } ?: "--:--"
+
+                            //android.util.Log.d("TODAY_CHECKIN", "Set values: checkin=$lastCheckin, checkout=$lastCheckout")
+                        } else {
+                            // ✅ Explicit fallback untuk response yang tidak success
                             lastCheckin = "--:--"
                             lastCheckout = "--:--"
+                            //android.util.Log.d("TODAY_CHECKIN", "User belum absen hari ini (${todayResponse.code ?: "404"})")
                         }
-                    } catch (e: Exception) {
-                        // Jika API today gagal, biarkan default --:--
+                    } catch (e: retrofit2.HttpException) {
+                        // ✅ Handle HTTP errors (404, 500, etc)
                         lastCheckin = "--:--"
                         lastCheckout = "--:--"
-                        android.util.Log.e("API_ERROR", "Gagal load today status: ${e.message}")
+                        //android.util.Log.d("TODAY_CHECKIN", "User belum absen hari ini (${e.code()})")
+                    } catch (e: Exception) {
+                        // ✅ Handle parsing/network errors
+                        lastCheckin = "--:--"
+                        lastCheckout = "--:--"
+                        //android.util.Log.e("API_ERROR", "Gagal load today status: ${e.message}", e)
                     }
 
                     uiState = DashboardUiState.Success(response.data)
                 }
             } catch (e: Exception) {
+                // ✅ Pastikan lastCheckin/lastCheckout tidak null bahkan saat error
+                lastCheckin = "--:--"
+                lastCheckout = "--:--"
                 uiState = DashboardUiState.Error(e.message ?: "Gagal memuat data")
             }
         }
@@ -154,7 +159,6 @@ class DashboardViewModel(
                 val attIdFormatter = SimpleDateFormat("ddMMMMyyyyHHmmss", localeId)
                 val generatedAttId = attIdFormatter.format(Date()) + snFromServer
 
-                // 1. Eksekusi API
                 val response: BaseAbsenResponse = if (inoutMode == 1) {
                     val scanDateFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", localeId)
                     apiService.postCheckin(
@@ -175,25 +179,24 @@ class DashboardViewModel(
                     )
                 }
 
-                // 2. Ambil pesan dari field 'response' (sesuai backend Anda)
                 val serverMsg = response.response ?: response.message ?: "Terjadi kesalahan"
 
                 when (response.result) {
-                    1 -> { // Sukses (Insert/Update)
+                    1 -> {
                         absenMessage = serverMsg
                         if (response.success) onSuccess()
                     }
-                    10 -> { // Device Tidak Cocok
+                    10 -> {
                         absenMessage = "❌ $serverMsg\nReg: $deviceIdInPref\nReal: $currentHardwareId"
                         android.util.Log.e("ABSEN_ERROR", "Terdaftar: $deviceIdInPref | Real: $currentHardwareId")
                     }
-                    2, 4, 5 -> { // Luar Jam Absen
+                    2, 4, 5 -> {
                         absenMessage = "⚠️ $serverMsg"
                     }
-                    7 -> { // Sudah Absen Pulang
+                    7 -> {
                         absenMessage = "ℹ️ $serverMsg"
                     }
-                    else -> { // Result 6, 8, atau lainnya
+                    else -> {
                         absenMessage = serverMsg
                     }
                 }

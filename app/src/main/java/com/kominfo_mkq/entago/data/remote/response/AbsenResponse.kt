@@ -27,13 +27,14 @@ data class CheckoutResponse(
 // Data class untuk menangkap response dari /api/checkin/today
 data class TodayCheckinResponse(
     val success: Boolean,
-    val message: String,
-    val data: TodayCheckinData?
+    val message: String?,  // ✅ UBAH KE NULLABLE untuk handle 404
+    val data: TodayCheckinData?,  // ✅ Tetap nullable
+    //val code: Int? = null  // ✅ TAMBAHKAN untuk debug
 )
 
 data class TodayCheckinData(
-    val pegawai_Id: Int,
-    val tgl_Shift: String,
-    val checkin: String?,
-    val checkout: String?
+    val pegawai_Id: Int? = null,  // ✅ Nullable dengan default
+    val tgl_Shift: String? = null,  // ✅ Nullable dengan default
+    val checkin: String? = null,  // ✅ Nullable
+    val checkout: String? = null  // ✅ Nullable
 )

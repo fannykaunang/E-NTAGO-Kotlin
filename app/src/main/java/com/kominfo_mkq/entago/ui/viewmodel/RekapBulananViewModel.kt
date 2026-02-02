@@ -24,8 +24,17 @@ class RekapBulananViewModel(private val apiService: ApiService) : ViewModel() {
                 val response = apiService.getRekapBulanan(year, true)
                 if (response.success) {
                     allRekapData = response.data
-                    // Set default ke bulan Januari (index 0)
-                    selectedMonthData = allRekapData.firstOrNull()
+
+                    // Logika dinamis mencari bulan berjalan
+                    val sdf = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US)
+                    val currentMonthStr = sdf.format(java.util.Date())
+
+                    val currentData = allRekapData.find { it.periode_Bulan == currentMonthStr }
+
+                    // SEKARANG: selectedMonthData hanya diisi oleh hasil pencarian bulan ini
+                    selectedMonthData = currentData ?: allRekapData.lastOrNull()
+
+                    android.util.Log.d("REKAP_DEBUG", "Fokus pada periode: ${selectedMonthData?.periode_Bulan}")
                 }
             } catch (e: Exception) {
                 // Handle Error
@@ -36,9 +45,11 @@ class RekapBulananViewModel(private val apiService: ApiService) : ViewModel() {
     }
 
     fun selectMonth(monthIndex: Int) {
-        // monthIndex 0 = Januari, 1 = Februari, dst.
-        if (monthIndex < allRekapData.size) {
+        if (allRekapData.isNotEmpty() && monthIndex < allRekapData.size) {
             selectedMonthData = allRekapData[monthIndex]
+        } else if (allRekapData.isNotEmpty()) {
+            // Fallback ke data pertama jika bulan yang dicari belum ada
+            selectedMonthData = allRekapData.firstOrNull()
         }
     }
 }

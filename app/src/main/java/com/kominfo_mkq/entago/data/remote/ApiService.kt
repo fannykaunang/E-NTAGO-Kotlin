@@ -3,6 +3,7 @@ package com.kominfo_mkq.entago.data.remote
 import com.kominfo_mkq.entago.data.remote.request.ChangePasswordRequest
 import com.kominfo_mkq.entago.data.remote.request.CheckinRequest
 import com.kominfo_mkq.entago.data.remote.request.CheckoutRequest
+import com.kominfo_mkq.entago.data.remote.request.FcmTokenRequest
 import com.kominfo_mkq.entago.data.remote.request.LoginRequest
 import com.kominfo_mkq.entago.data.remote.response.BaseResponse
 import com.kominfo_mkq.entago.data.remote.response.CheckinResponse
@@ -10,6 +11,7 @@ import com.kominfo_mkq.entago.data.remote.response.CheckoutResponse
 import com.kominfo_mkq.entago.data.remote.response.DeviceMonitorResponse
 import com.kominfo_mkq.entago.data.remote.response.IzinResponse
 import com.kominfo_mkq.entago.data.remote.response.LoginResponse
+import com.kominfo_mkq.entago.data.remote.response.NotificationsDetailResponse
 import com.kominfo_mkq.entago.data.remote.response.PegawaiResponse
 import com.kominfo_mkq.entago.data.remote.response.RekapBulananResponse
 import com.kominfo_mkq.entago.data.remote.response.RiwayatResponse
@@ -94,10 +96,10 @@ interface ApiService {
         @Body request: CheckoutRequest
     ): CheckoutResponse
 
-//    @GET("/api/checkin/today")
-//    suspend fun getTodayCheckin(): TodayCheckinResponse
     @GET("/api/checkin/today")
-    suspend fun getTodayCheckin(): Response<TodayCheckinResponse>
+    suspend fun getTodayCheckin(): TodayCheckinResponse
+    //@GET("/api/checkin/today")
+    //suspend fun getTodayCheckin(): Response<TodayCheckinResponse>
 
     @PUT("api/auth/change-password")
     suspend fun changePassword(
@@ -107,5 +109,18 @@ interface ApiService {
     @GET("api/monitor/devices")
     suspend fun getDeviceStatus(
         @Query("skpdid") skpdId: Int
-    ): retrofit2.Response<DeviceMonitorResponse>
+    ): Response<DeviceMonitorResponse>
+
+    @PUT("api/pegawai/fcm-token")
+    suspend fun updateFcmToken(
+        @Body request: FcmTokenRequest
+    ): Response<BaseResponse>
+
+    @GET("api/notifications/{id}")
+    suspend fun getNotificationDetail(@Path("id") id: String): Response<NotificationsDetailResponse>
+
+    @PUT("api/notifications/{id}/read")
+    suspend fun markAsRead(
+        @Path("id") id: String
+    ): Response<BaseResponse>
 }

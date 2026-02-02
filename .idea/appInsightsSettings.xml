@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.kominfo_mkq.entago" />
+                  <option name="mobileSdkAppId" value="1:1091108679854:android:634bba78343abc14d8fd3f" />
+                  <option name="projectId" value="izakod-asn-android-push-notify" />
+                  <option name="projectNumber" value="1091108679854" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

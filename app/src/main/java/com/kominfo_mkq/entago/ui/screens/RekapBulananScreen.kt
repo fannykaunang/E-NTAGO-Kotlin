@@ -48,6 +48,7 @@ import java.util.Calendar
 @Composable
 fun RekapBulananScreen(navController: NavHostController, viewModel: RekapBulananViewModel) {
     val data = viewModel.selectedMonthData
+    val selectedIndex = viewModel.allRekapData.indexOf(viewModel.selectedMonthData).coerceAtLeast(0)
 
     LaunchedEffect(Unit) {
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
@@ -76,16 +77,25 @@ fun RekapBulananScreen(navController: NavHostController, viewModel: RekapBulanan
         .padding(horizontal = 16.dp)) {
         // --- DROPDOWN ATAU TAB PILIH BULAN ---
         SecondaryScrollableTabRow(
-            selectedTabIndex = viewModel.allRekapData.indexOf(data).coerceAtLeast(0),
-            edgePadding = 0.dp,
-            containerColor = Color.Transparent
+            selectedTabIndex = selectedIndex, //viewModel.allRekapData.indexOf(data).coerceAtLeast(0),
+            edgePadding = 16.dp,
+            containerColor = Color.Transparent,
+            divider = {}
         ) {
             val bulanNames = listOf("Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des")
             bulanNames.forEachIndexed { index, name ->
                 Tab(
-                    selected = false,
+                    // --- PERBAIKAN: Logika selected harus dinamis ---
+                    selected = index == selectedIndex,
                     onClick = { viewModel.selectMonth(index) },
-                    text = { Text(name) }
+                    text = {
+                        Text(
+                            text = name,
+                            fontWeight = if (index == selectedIndex) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
+                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
