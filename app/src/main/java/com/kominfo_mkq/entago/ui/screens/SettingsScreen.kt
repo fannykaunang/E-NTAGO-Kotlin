@@ -67,13 +67,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.navigation.NavHostController
+import com.kominfo_mkq.entago.BuildConfig
 import com.kominfo_mkq.entago.data.local.AppDatabase
 import com.kominfo_mkq.entago.data.local.PrefManager
 import com.kominfo_mkq.entago.ui.viewmodel.SettingsViewModel
 import com.kominfo_mkq.entago.utils.getDeviceId
 import com.kominfo_mkq.entago.utils.openWhatsApp
-import androidx.core.net.toUri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -171,6 +172,17 @@ fun SettingsScreen(
                     checked = true,
                     onCheckedChange = { /* Toggle Notif */ }
                 )
+//                ClickableSettingsItem(
+//                    label = "Uji Coba Notifikasi Pengingat",
+//                    icon = Icons.Default.Notifications,
+//                    onClick = {
+//                        NotificationUtils.showNotification(
+//                            context,
+//                            "Tes Notifikasi E-NTAGO",
+//                            "Jika Anda melihat ini, sistem notifikasi sudah aktif dan siap digunakan."
+//                        )
+//                    }
+//                )
             }
 
             // 4. Data & Sinkronisasi
@@ -198,7 +210,7 @@ fun SettingsScreen(
 
             // 5. Informasi & Bantuan
             SettingsSection(title = "Bantuan", icon = Icons.AutoMirrored.Filled.HelpCenter) {
-                ClickableSettingsItem(label = "Panduan Pengguna", icon = Icons.AutoMirrored.Filled.MenuBook, onClick = { })
+                ClickableSettingsItem(label = "Panduan Pengguna", icon = Icons.AutoMirrored.Filled.MenuBook, onClick = { navController.navigate("panduan")})
                 ClickableSettingsItem(label = "Hubungi IT Kominfo", icon = Icons.Default.SupportAgent, onClick = {
                     openWhatsApp(
                         context = context,
@@ -352,7 +364,7 @@ fun SettingsHeaderCard() {
                     fontSize = 22.sp
                 )
                 Text(
-                    text = "Versi Aplikasi 2.0.4-stable",
+                    text = "Versi Aplikasi ${BuildConfig.VERSION_NAME}-stable",
                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
                     fontSize = 12.sp
                 )

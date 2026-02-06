@@ -61,10 +61,10 @@ class PrefManager(context: Context) {
         return sharedPrefs.getString("pin", null)
     }
 
-    fun isLoggedIn(): Boolean {
-        // Jika token tidak null dan tidak kosong, berarti user sudah login
-        return !sharedPrefs.getString("token", null).isNullOrEmpty()
-    }
+//    fun isLoggedIn(): Boolean {
+//        // Jika token tidak null dan tidak kosong, berarti user sudah login
+//        return !sharedPrefs.getString("token", null).isNullOrEmpty()
+//    }
 
     // Di PrefManager.kt
     fun savePegawaiProfile(nama: String, nip: String, peg_id: Int, lat: String?, lng: String?, sn: String?, deviceId: String?, skpd: String) {
@@ -110,10 +110,10 @@ class PrefManager(context: Context) {
         return if (lat.isNullOrBlank()) 140.399 else lat.toDouble()
     }
 
-    // Fungsi untuk Logout (Hapus data)
-    fun clearData() {
-        sharedPrefs.edit { clear() }
-    }
+//    // Fungsi untuk Logout (Hapus data)
+//    fun clearData() {
+//        sharedPrefs.edit { clear() }
+//    }
 
     // Di dalam PrefManager.kt
     fun saveBiometricCredentials(email: String, pass: String) {
@@ -145,5 +145,9 @@ class PrefManager(context: Context) {
     fun isBiometricEnabled(): Boolean {
         // Default true, agar fitur langsung aktif setelah login pertama
         return sharedPrefs.getBoolean(BIOMETRIC_ENABLED_KEY, true)
+    }
+
+    fun updateLocalDeviceId(newId: String) {
+        sharedPrefs.edit { putString("deviceid", newId) }
     }
 }

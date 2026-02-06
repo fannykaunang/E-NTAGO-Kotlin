@@ -37,7 +37,7 @@ fun formatPeriode(periode: String?): String {
         }
 
         "$namaBulan $tahun"
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         periode // Kembalikan teks asli jika gagal parsing
     }
 }

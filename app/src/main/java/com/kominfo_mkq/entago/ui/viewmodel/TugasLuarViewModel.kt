@@ -9,7 +9,6 @@ import androidx.lifecycle.viewModelScope
 import com.kominfo_mkq.entago.data.local.dao.TugasLuarDao
 import com.kominfo_mkq.entago.data.remote.ApiService
 import com.kominfo_mkq.entago.data.remote.response.TugasLuarData
-import com.kominfo_mkq.entago.data.remote.response.TugasLuarResponse
 import kotlinx.coroutines.launch
 
 class TugasLuarViewModel(

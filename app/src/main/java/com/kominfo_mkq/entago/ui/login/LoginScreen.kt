@@ -14,9 +14,18 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -25,11 +34,32 @@ import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -44,8 +74,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavHostController
-import kotlinx.coroutines.delay
 import com.kominfo_mkq.entago.R
+import kotlinx.coroutines.delay
 
 // Helper untuk mendapatkan FragmentActivity
 fun Context.findActivity(): FragmentActivity? {
@@ -84,6 +114,8 @@ fun LoginScreen(
         }
     }
 
+    val currentDeviceId = remember { com.kominfo_mkq.entago.utils.getDeviceId(context) }
+
     // --- SETUP BIOMETRIC PROMPT ---
     val biometricPrompt = remember(activity) {
         activity?.let {
@@ -91,7 +123,7 @@ fun LoginScreen(
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
                     showBottomSheet = false
-                    viewModel.loginWithBiometric()
+                    viewModel.loginWithBiometric(currentDeviceId)
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
@@ -115,31 +147,48 @@ fun LoginScreen(
     }
 
     // Navigasi saat Sukses
+// GABUNGKAN MENJADI SATU SEPERTI INI
     LaunchedEffect(viewModel.uiState) {
-        if (viewModel.uiState is LoginUiState.Success) {
-            delay(200) // Jeda transisi halus
+        when (val state = viewModel.uiState) {
+            is LoginUiState.Success -> {
+                // Jalankan logika izin notifikasi dulu sebelum ke Dashboard
+                delay(200) // Jeda transisi halus
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val isPermissionGranted = ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val isPermissionGranted = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_GRANTED
 
-                if (!isPermissionGranted) {
-                    // Jika belum ada izin, munculkan dialog izin
-                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    if (!isPermissionGranted) {
+                        // Minta izin, navigasi dashboard akan dipicu oleh permissionLauncher
+                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        navController.navigate("dashboard") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    }
                 } else {
-                    // Jika sudah ada izin, langsung navigasi
+                    // Langsung navigasi untuk Android di bawah 13
                     navController.navigate("dashboard") {
                         popUpTo("login") { inclusive = true }
                     }
                 }
-            } else {
-                // Untuk Android di bawah 13, tidak perlu izin runtime
-                navController.navigate("dashboard") {
+            }
+
+            is LoginUiState.NeedsRegistration -> {
+                // Jika device_id kosong, arahkan ke aktivasi
+                navController.navigate("device_activation") {
                     popUpTo("login") { inclusive = true }
                 }
             }
+
+            is LoginUiState.NeedsMigration -> {
+                // Jika device_id beda, arahkan ke migrasi (bawa ID lama sebagai argumen)
+                navController.navigate("device_migration/${state.registeredDeviceId}")
+            }
+
+            else -> { /* Idle atau Error tidak perlu navigasi */ }
         }
     }
 
@@ -234,7 +283,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
-                        label = { Text("Email ASN") },
+                        label = { Text("Email") },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Email,
@@ -289,6 +338,7 @@ fun LoginScreen(
                             PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
+                        singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
                             focusedLabelColor = MaterialTheme.colorScheme.primary,
@@ -302,7 +352,7 @@ fun LoginScreen(
 
                     // Login Button dengan Gradient Effect
                     Button(
-                        onClick = { viewModel.login(email, password) },
+                        onClick = { viewModel.login(email, password, currentDeviceId) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
@@ -334,7 +384,7 @@ fun LoginScreen(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Divider(
+                            HorizontalDivider(
                                 modifier = Modifier.weight(1f),
                                 color = MaterialTheme.colorScheme.outlineVariant
                             )
@@ -344,7 +394,7 @@ fun LoginScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium
                             )
-                            Divider(
+                            HorizontalDivider(
                                 modifier = Modifier.weight(1f),
                                 color = MaterialTheme.colorScheme.outlineVariant
                             )
@@ -404,8 +454,8 @@ fun LoginScreen(
 
             // Footer Text
             Text(
-                text = "© 2025 Kominfo Merauke",
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                text = "© 2026 Kominfo Merauke",
+                color = Color.White,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )

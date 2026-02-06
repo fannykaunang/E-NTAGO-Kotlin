@@ -98,7 +98,7 @@ class TugasLuarAddViewModel(private val apiService: ApiService) : ViewModel() {
                                 val errorMessage = try {
                                     // Parsing pesan "message" dari JSON 400 Bad Request Anda
                                     Gson().fromJson(errorBody, TugasLuarUploadResponse::class.java).message
-                                } catch (parseError: Exception) {
+                                } catch (_: Exception) {
                                     "Gagal: ${e.message()}"
                                 }
 

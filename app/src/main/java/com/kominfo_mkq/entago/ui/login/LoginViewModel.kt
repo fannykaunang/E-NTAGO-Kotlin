@@ -55,20 +55,20 @@ class LoginViewModel(
                 !prefManager.getBiometricPass().isNullOrEmpty()
     }
 
-    fun loginWithBiometric() {
+    fun loginWithBiometric(currentDeviceId: String) {
         val email = prefManager.getBiometricEmail() ?: return
         val pass = prefManager.getBiometricPass() ?: return
 
         // Reset ke Idle dulu agar LaunchedEffect di UI mendeteksi perubahan state yang baru
         uiState = LoginUiState.Idle
-        login(email, pass)
+        login(email, pass,currentDeviceId)
     }
 
-    fun login(email: String, password: String) {
+    // LoginViewModel.kt
+    fun login(email: String, password: String, currentDeviceId: String) {
         val cleanEmail = email.trim()
         val cleanPassword = password.trim()
 
-        // Validasi input sederhana
         if (email.isEmpty() || password.isEmpty()) {
             uiState = LoginUiState.Error("Email dan password tidak boleh kosong")
             return
@@ -77,31 +77,37 @@ class LoginViewModel(
         viewModelScope.launch {
             uiState = LoginUiState.Loading
             try {
+                // Gunakan Response<LoginResponse> di ApiService agar bisa baca errorBody
                 val response = apiService.login(LoginRequest(cleanEmail, cleanPassword))
 
-                if (response.success && response.data != null) {
-                    // 1. Ambil objek user dari response.data
-                    val userData = response.data.user
-                    val token = response.data.token
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val responseData = response.body()?.data!!
+                    val userData = responseData.user
 
-                    // 2. Perbaiki LOG (Akses harus melalui userData)
-                    android.util.Log.d("LOGIN_API_DEBUG", "Data dari API - Lat: ${userData.latitude}, Lng: ${userData.longitude}")
-
-                    // 3. Simpan ke PrefManager
-                    prefManager.saveAuthData(
-                        token = token,
-                        user = userData
-                    )
-                    uiState = LoginUiState.Success
-
+                    prefManager.saveAuthData(token = responseData.token, user = userData)
                     prefManager.saveBiometricCredentials(cleanEmail, cleanPassword)
-
                     updateFcmTokenToServer()
+
+                    val serverDeviceId = userData.deviceid.trim()
+                    when {
+                        serverDeviceId.isNullOrEmpty() -> uiState = LoginUiState.NeedsRegistration
+                        serverDeviceId != currentDeviceId -> uiState = LoginUiState.NeedsMigration(serverDeviceId)
+                        else -> uiState = LoginUiState.Success
+                    }
                 } else {
-                    uiState = LoginUiState.Error(response.message)
+                    // AMBIL PESAN ERROR DARI JSON SERVER (errorBody)
+                    val errorJson = response.errorBody()?.string()
+                    val message = try {
+                        // Parsing manual pesan dari JSON {"message": "..."}
+                        val jsonObject = org.json.JSONObject(errorJson ?: "{}")
+                        jsonObject.getString("message")
+                    } catch (_: Exception) {
+                        "Gagal masuk: Kode ${response.code()} Pesan: ${response.message()}"
+                    }
+                    uiState = LoginUiState.Error(message)
                 }
             } catch (e: Exception) {
-                uiState = LoginUiState.Error("Terjadi kesalahan jaringan: ${e.message}")
+                uiState = LoginUiState.Error("Masalah koneksi: ${e.message}")
             }
         }
     }
@@ -120,5 +126,7 @@ sealed class LoginUiState {
     object Idle : LoginUiState()
     object Loading : LoginUiState()
     object Success : LoginUiState()
+    object NeedsRegistration : LoginUiState() // Jika deviceid di server NULL
+    data class NeedsMigration(val registeredDeviceId: String) : LoginUiState() // Jika deviceid BEDA
     data class Error(val message: String) : LoginUiState()
 }

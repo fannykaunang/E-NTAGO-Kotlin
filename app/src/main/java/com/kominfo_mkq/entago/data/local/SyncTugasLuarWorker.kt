@@ -75,7 +75,7 @@ class SyncTugasLuarWorker(context: Context, params: WorkerParameters) : Coroutin
                 if (e.code() == 400) {
                     // SERVER MENOLAK (Data duplikat/salah)
                     // Jangan RETRY! Hapus saja dari HP karena dikirim kapanpun akan tetap ditolak.
-                    android.util.Log.e("SYNC_WORKER", "Data ditolak server (400): ${e.message()}")
+                    //android.util.Log.e("SYNC_WORKER", "Data ditolak server (400): ${e.message()}")
                     dao.deleteDraft(draft)
                     if (file.exists()) file.delete()
                     allSuccess = false
@@ -83,7 +83,7 @@ class SyncTugasLuarWorker(context: Context, params: WorkerParameters) : Coroutin
                     // Error lain (misal 500 atau 503), silakan RETRY
                     return Result.retry()
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Error jaringan (Koneksi putus), silakan RETRY
                 return Result.retry()
             }

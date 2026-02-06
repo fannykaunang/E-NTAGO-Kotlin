@@ -146,4 +146,45 @@ object FileUtils {
         fos.close()
         return file
     }
+
+    fun getFileFromUriIzin(context: Context, uri: Uri): File? {
+        val contentResolver = context.contentResolver
+        val type = contentResolver.getType(uri)
+
+        // Buat file temporary
+        val tempFile = File.createTempFile("upload_", getExtension(type), context.cacheDir)
+
+        try {
+            val inputStream: InputStream? = contentResolver.openInputStream(uri) ?: return null
+
+            // LOGIKA KOMPRESI GAMBAR
+            if (type?.startsWith("image/") == true) {
+                val originalBitmap = BitmapFactory.decodeStream(inputStream)
+                val outputStream = FileOutputStream(tempFile)
+                // Compress 75%
+                originalBitmap.compress(Bitmap.CompressFormat.JPEG, 75, outputStream)
+                outputStream.flush()
+                outputStream.close()
+            } else {
+                // Jika PDF/Lainnya, salin biasa
+                val outputStream = FileOutputStream(tempFile)
+                inputStream?.copyTo(outputStream)
+                outputStream.close()
+            }
+            inputStream?.close()
+            return tempFile
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
+
+    private fun getExtension(mimeType: String?): String {
+        return when (mimeType) {
+            "application/pdf" -> ".pdf"
+            "image/png" -> ".png"
+            "image/jpeg" -> ".jpg"
+            else -> ".tmp"
+        }
+    }
 }

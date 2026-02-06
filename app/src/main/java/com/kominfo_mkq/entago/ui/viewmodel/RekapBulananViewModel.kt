@@ -6,9 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.kominfo_mkq.entago.data.local.PrefManager
 import com.kominfo_mkq.entago.data.remote.ApiService
-import com.kominfo_mkq.entago.data.remote.response.PegawaiData
 import com.kominfo_mkq.entago.data.remote.response.RekapBulananData
 import kotlinx.coroutines.launch
 
@@ -36,7 +34,7 @@ class RekapBulananViewModel(private val apiService: ApiService) : ViewModel() {
 
                     android.util.Log.d("REKAP_DEBUG", "Fokus pada periode: ${selectedMonthData?.periode_Bulan}")
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Handle Error
             } finally {
                 isLoading = false

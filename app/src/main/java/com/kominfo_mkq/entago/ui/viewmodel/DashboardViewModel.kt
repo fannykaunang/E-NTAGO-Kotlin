@@ -38,16 +38,39 @@ class DashboardViewModel(
     var isMachineOnline by mutableStateOf(false)
         private set
 
-    // Update fungsi refresh agar mencakup status mesin
-    fun refreshAllData(riwayatViewModel: RiwayatViewModel, onFinished: () -> Unit) {
+    var unreadNotificationCount by mutableStateOf(0)
+        private set
+
+    fun fetchUnreadCount() {
+        val pegId = prefManager.getPegawaiId()?.toString() ?: ""
         viewModelScope.launch {
-            val profileJob = launch { loadProfile() }
+            try {
+                // Kita ambil page 1 dengan size agak besar (misal 50) untuk menghitung unread
+                val response = apiService.getNotifications(pegId, page = 1, pageSize = 50)
+                if (response.success) {
+                    unreadNotificationCount = response.data.count { !it.is_Read }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("NOTIF_DEBUG", "Gagal ambil count: ${e.message}")
+            }
+        }
+    }
+
+    fun refreshAllData(
+        riwayatViewModel: RiwayatViewModel,
+        currentDeviceId: String,
+        onFinished: () -> Unit
+    ) {
+        viewModelScope.launch {
+            val profileJob = launch { loadProfile(currentDeviceId) }
             val riwayatJob = launch { riwayatViewModel.fetchRiwayatData(refresh = true) }
             val machineJob = launch { checkDeviceStatus() }
+            val notifJob = launch { fetchUnreadCount() }
 
             profileJob.join()
             riwayatJob.join()
             machineJob.join()
+            notifJob.join()
 
             onFinished()
         }
@@ -85,12 +108,20 @@ class DashboardViewModel(
         }
     }
 
-    fun loadProfile() {
+    fun loadProfile(currentDeviceId: String) {
         val pin = prefManager.getPin() ?: ""
         viewModelScope.launch {
             try {
                 val response = apiService.getPegawai(pin)
                 if (response.success) {
+                    val serverDeviceId = response.data.deviceid?.trim() ?: ""
+
+                    // --- PROTEKSI KEAMANAN: CEK INTEGRITAS PERANGKAT ---
+                    if (serverDeviceId.isNotEmpty() && serverDeviceId != currentDeviceId) {
+                        uiState = DashboardUiState.DeviceMismatch(serverDeviceId)
+                        return@launch // Hentikan proses, jangan lanjut ke Dashboard
+                    }
+
                     prefManager.savePegawaiProfile(
                         nama = response.data.pegawai_nama ?: "",
                         nip = response.data.pegawai_nip ?: "",
@@ -112,7 +143,6 @@ class DashboardViewModel(
                             // ✅ Safe assignment dengan fallback
                             lastCheckin = todayResponse.data.checkin?.takeIf { it.isNotBlank() } ?: "--:--"
                             lastCheckout = todayResponse.data.checkout?.takeIf { it.isNotBlank() } ?: "--:--"
-
                             //android.util.Log.d("TODAY_CHECKIN", "Set values: checkin=$lastCheckin, checkout=$lastCheckout")
                         } else {
                             // ✅ Explicit fallback untuk response yang tidak success
@@ -120,12 +150,12 @@ class DashboardViewModel(
                             lastCheckout = "--:--"
                             //android.util.Log.d("TODAY_CHECKIN", "User belum absen hari ini (${todayResponse.code ?: "404"})")
                         }
-                    } catch (e: retrofit2.HttpException) {
+                    } catch (_: retrofit2.HttpException) {
                         // ✅ Handle HTTP errors (404, 500, etc)
                         lastCheckin = "--:--"
                         lastCheckout = "--:--"
                         //android.util.Log.d("TODAY_CHECKIN", "User belum absen hari ini (${e.code()})")
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         // ✅ Handle parsing/network errors
                         lastCheckin = "--:--"
                         lastCheckout = "--:--"
@@ -133,6 +163,7 @@ class DashboardViewModel(
                     }
 
                     uiState = DashboardUiState.Success(response.data)
+                    fetchUnreadCount()
                 }
             } catch (e: Exception) {
                 // ✅ Pastikan lastCheckin/lastCheckout tidak null bahkan saat error
@@ -159,6 +190,9 @@ class DashboardViewModel(
                 val attIdFormatter = SimpleDateFormat("ddMMMMyyyyHHmmss", localeId)
                 val generatedAttId = attIdFormatter.format(Date()) + snFromServer
 
+//                val timeFormatter = SimpleDateFormat("HH:mm", localeId)
+//                val currentTime = timeFormatter.format(Date())
+
                 val response: BaseAbsenResponse = if (inoutMode == 1) {
                     val scanDateFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", localeId)
                     apiService.postCheckin(
@@ -184,7 +218,9 @@ class DashboardViewModel(
                 when (response.result) {
                     1 -> {
                         absenMessage = serverMsg
-                        if (response.success) onSuccess()
+                        if (response.success) {
+                            onSuccess()
+                        }
                     }
                     10 -> {
                         absenMessage = "❌ $serverMsg\nReg: $deviceIdInPref\nReal: $currentHardwareId"
@@ -227,4 +263,5 @@ sealed class DashboardUiState {
     object Loading : DashboardUiState()
     data class Success(val data: PegawaiData) : DashboardUiState()
     data class Error(val message: String) : DashboardUiState()
+    data class DeviceMismatch(val oldDeviceId: String) : DashboardUiState()
 }

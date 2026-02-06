@@ -2,7 +2,10 @@ package com.kominfo_mkq.entago.ui.screens
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,6 +44,7 @@ import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DarkMode
@@ -54,20 +58,25 @@ import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SupportAgent
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -89,6 +98,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -99,6 +109,8 @@ import com.google.android.gms.location.LocationSettingsRequest
 import com.google.android.gms.location.Priority
 import com.kominfo_mkq.entago.data.local.PrefManager
 import com.kominfo_mkq.entago.ui.theme.Orange
+import com.kominfo_mkq.entago.ui.theme.StatusApproved
+import com.kominfo_mkq.entago.ui.theme.StatusRejected
 import com.kominfo_mkq.entago.ui.viewmodel.DashboardUiState
 import com.kominfo_mkq.entago.ui.viewmodel.DashboardViewModel
 import com.kominfo_mkq.entago.ui.viewmodel.RiwayatViewModel
@@ -118,6 +130,22 @@ fun DashboardScreen(
 ) {
     val context = LocalContext.current
     val uiState = viewModel.uiState
+
+    val activity = LocalActivity.current
+
+    BackHandler {
+        activity?.finish()
+    }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (!isGranted) {
+            Toast.makeText(context, "Notifikasi penting untuk info absensi", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    var showPermissionRationale by remember { mutableStateOf(false) }
 
     //android.util.Log.d("DEBUG_NULL", "Checkin: ${viewModel.lastCheckin}")
     //android.util.Log.d("DEBUG_NULL", "Checkout: ${viewModel.lastCheckout}")
@@ -204,7 +232,7 @@ fun DashboardScreen(
 
                                 if (withinRadius) {
                                     viewModel.performAbsensi(currentHardwareId, inoutMode) {
-                                        viewModel.loadProfile()
+                                        viewModel.loadProfile(currentHardwareId)
                                         riwayatViewModel.fetchRiwayatData(refresh = true)
 
                                         // Tambahan: Beri feedback ke user
@@ -248,8 +276,25 @@ fun DashboardScreen(
     )
 
     LaunchedEffect(Unit) {
-        viewModel.loadProfile()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val hasNotif = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            val hasLoc = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+            // Jika salah satu izin penting belum ada, munculkan dialog penjelasan
+            if (!hasNotif || !hasLoc) {
+                showPermissionRationale = true
+            }
+        }
+
+        // B. Load Data Profil & Riwayat
+        viewModel.loadProfile(currentHardwareId)
         riwayatViewModel.fetchRiwayatData()
+
+        // C. Cek Status Mesin
+        android.util.Log.d("DEVICE_MONITOR", "Halaman Dashboard Terbuka, memanggil fungsi...")
+        viewModel.checkDeviceStatus()
+
+        viewModel.fetchUnreadCount()
     }
 
     LaunchedEffect(locationPermissionsState.allPermissionsGranted) {
@@ -258,9 +303,26 @@ fun DashboardScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        android.util.Log.d("DEVICE_MONITOR", "Halaman Dashboard Terbuka, memanggil fungsi...")
-        viewModel.checkDeviceStatus()
+    LaunchedEffect(uiState) {
+        if (uiState is DashboardUiState.DeviceMismatch) {
+            navController.navigate("device_migration/${uiState.oldDeviceId}") {
+                popUpTo("dashboard") { inclusive = true }
+            }
+        }
+    }
+
+    if (showPermissionRationale) {
+        PermissionRationaleDialog(
+            onConfirm = {
+                showPermissionRationale = false
+                // Picu permintaan izin sistem setelah user setuju di dialog kita
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                locationPermissionsState.launchMultiplePermissionRequest()
+            },
+            onDismiss = { showPermissionRationale = false }
+        )
     }
 
     // Animation for button
@@ -285,7 +347,7 @@ fun DashboardScreen(
             onRefresh = {
                 isRefreshing = true
                 // Panggil fungsi di ViewModel
-                viewModel.refreshAllData(riwayatViewModel) {
+                viewModel.refreshAllData(riwayatViewModel, currentHardwareId) {
                     isRefreshing = false
                 }
             }
@@ -298,9 +360,11 @@ fun DashboardScreen(
                 .padding(bottom = bottomButtonSpace)
         ) {
             CompactHeader(
+                navController = navController,
                 uiState = uiState,
                 isDarkMode = isDarkMode,
                 isMachineOnline = viewModel.isMachineOnline,
+                unreadCount = viewModel.unreadNotificationCount,
                 onThemeToggle = onThemeToggle
             )
 
@@ -354,6 +418,20 @@ fun DashboardScreen(
                 .padding(horizontal = 16.dp, vertical = 16.dp)
                 .navigationBarsPadding()
         )
+        FloatingActionButton(
+            onClick = { navController.navigate("ai_chat") }, // Navigasi ke AI Chat
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer, // Warna pembeda
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            modifier = Modifier
+                .align(Alignment.BottomEnd) // Posisi Kanan Bawah
+                .padding(end = 16.dp, bottom = 100.dp) // Bottom 100dp agar di ATAS tombol Presensi
+                .navigationBarsPadding() // Agar aman dari gesture bar HP
+        ) {
+            Icon(
+                imageVector = Icons.Default.AutoAwesome, // Atau Icons.Default.SmartToy
+                contentDescription = "Tanya AI"
+            )
+        }
     }
 
     if (showMoreSheet) {
@@ -574,11 +652,14 @@ fun ModernStatsCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class) // Badge perlu ini
 @Composable
 fun CompactHeader(
+    navController: NavHostController,
     uiState: DashboardUiState,
     isDarkMode: Boolean,
     isMachineOnline: Boolean,
+    unreadCount: Int,
     onThemeToggle: () -> Unit
 ) {
     val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
@@ -636,13 +717,34 @@ fun CompactHeader(
                         )
                     }
 
-                    IconButton(onClick = { /* Notifikasi */ }, modifier = Modifier.size(36.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifikasi",
-                            tint = Color.White.copy(alpha = 0.9f),
-                            modifier = Modifier.size(20.dp)
-                        )
+                    androidx.compose.material3.BadgedBox(
+                        badge = {
+                            if (unreadCount > 0) {
+                                androidx.compose.material3.Badge(
+                                    containerColor = Color.Red,
+                                    contentColor = Color.White,
+                                    modifier = Modifier.offset(x = (-4).dp, y = 4.dp)
+                                ) {
+                                    Text(
+                                        text = if (unreadCount > 99) "99+" else unreadCount.toString(),
+                                        fontSize = 10.sp
+                                    )
+                                }
+                            }
+                        },
+                        modifier = Modifier.padding(end = 4.dp)
+                    ) {
+                        IconButton(
+                            onClick = { navController.navigate("notification_screen") },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notifikasi",
+                                tint = Color.White.copy(alpha = 0.9f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -655,6 +757,14 @@ fun CompactHeader(
                         color = Color.White,
                         modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp
+                    )
+                }
+
+                is DashboardUiState.DeviceMismatch -> {
+                    Text(
+                        text = "Memverifikasi Perangkat...",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp
                     )
                 }
 
@@ -683,7 +793,7 @@ fun CompactHeader(
                                 val nipValue = pegawai.pegawai_nip ?: ""
                                 if (nipValue.isNotEmpty()) {
                                     clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(nipValue))
-                                    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
+                                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
                                         Toast.makeText(
                                             context,
                                             "NIP disalin ke clipboard",
@@ -764,7 +874,7 @@ fun QuickStatsRow(checkin: String, checkout: String) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Login, // Diubah ke Login agar sesuai arti "Datang"
                         contentDescription = null,
-                        tint = Color(0xFF43A047),
+                        tint = StatusApproved,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -782,7 +892,7 @@ fun QuickStatsRow(checkin: String, checkout: String) {
                         fontWeight = FontWeight.Bold,
                         color = if (checkin == "--:--" || checkin.isEmpty())
                             MaterialTheme.colorScheme.onSurfaceVariant
-                        else Color(0xFF43A047)
+                        else StatusApproved
                     )
                 }
             }
@@ -807,7 +917,7 @@ fun QuickStatsRow(checkin: String, checkout: String) {
                     modifier = Modifier
                         .size(40.dp)
                         .background(
-                            Color(0xFFE64A19).copy(alpha = 0.1f),
+                            StatusRejected.copy(alpha = 0.1f),
                             shape = RoundedCornerShape(12.dp)
                         ),
                     contentAlignment = Alignment.Center
@@ -815,7 +925,7 @@ fun QuickStatsRow(checkin: String, checkout: String) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Logout, // Tetap Logout untuk "Pulang"
                         contentDescription = null,
-                        tint = Color(0xFFE64A19),
+                        tint = StatusRejected,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -833,7 +943,7 @@ fun QuickStatsRow(checkin: String, checkout: String) {
                         fontWeight = FontWeight.Bold,
                         color = if (checkout == "--:--" || checkout.isEmpty())
                             MaterialTheme.colorScheme.onSurfaceVariant
-                        else Color(0xFFE64A19)
+                        else StatusRejected
                     )
                 }
             }
@@ -1045,13 +1155,61 @@ fun CompactMenuItem(
             text = item.title,
             style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
-            color = if (iconColor == Color.Red) Color.Red else MaterialTheme.colorScheme.onSurface,
+            color = if (iconColor == StatusRejected) StatusRejected else MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Medium,
             fontSize = 10.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
     }
+}
+
+@Composable
+fun PermissionRationaleDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("SAYA MENGERTI")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("NANTI SAJA", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        icon = {
+            Icon(
+                Icons.Default.Notifications,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(40.dp)
+            )
+        },
+        title = {
+            Text(
+                text = "Izin Akses Diperlukan",
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        },
+        text = {
+            Text(
+                text = "Untuk pengalaman absensi yang optimal di E-NTAGO, kami memerlukan izin Notifikasi agar Anda mendapatkan Informasi Libur/Cuti Bersama, serta izin Lokasi untuk memastikan Anda berada dalam radius kantor saat melakukan presensi.",
+                textAlign = TextAlign.Center,
+                lineHeight = 20.sp,
+                fontSize = 14.sp
+            )
+        },
+        shape = RoundedCornerShape(28.dp),
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f) // Efek agak transparan
+    )
 }
 
 data class MenuItem(

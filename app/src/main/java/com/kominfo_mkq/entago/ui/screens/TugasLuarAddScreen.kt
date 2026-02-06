@@ -26,13 +26,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Refresh
@@ -45,7 +43,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -68,7 +65,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -299,7 +295,7 @@ fun TugasLuarAddScreen(
             ModernSubmitButton(
                 isLoading = viewModel.isLoading,
                 isEnabled = !viewModel.isLoading && viewModel.latitude.isNotEmpty(),
-                isTimeValid = isTimeValid,
+//                isTimeValid = isTimeValid,
                 onClick = {
                     if (!isTimeValid) {
                         Toast.makeText(context, "Input Tugas Luar hanya bisa dilakukan pada jam yang ditentukan.", Toast.LENGTH_LONG).show()
@@ -696,7 +692,7 @@ fun ModernLocationCard(
 fun ModernSubmitButton(
     isLoading: Boolean,
     isEnabled: Boolean,
-    isTimeValid: Boolean,
+//    isTimeValid: Boolean,
     onClick: () -> Unit
 ) {
     Button(
@@ -738,10 +734,10 @@ fun ModernSubmitButton(
 }
 
 // Backward compatibility
-@Composable
-fun TimeInfoAlert() {
-    ModernTimeInfoAlert()
-}
+//@Composable
+//fun TimeInfoAlert() {
+//    ModernTimeInfoAlert()
+//}
 
 @Composable
 fun FormInput(

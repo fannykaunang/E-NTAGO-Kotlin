@@ -23,6 +23,8 @@ import com.kominfo_mkq.entago.data.remote.response.NotifDetailData
 import com.kominfo_mkq.entago.ui.components.EmptyState
 import com.kominfo_mkq.entago.ui.viewmodel.NotifDetailUiState
 import com.kominfo_mkq.entago.ui.viewmodel.NotificationDetailViewModel
+import com.kominfo_mkq.entago.utils.TimeUtils.formatDate
+import com.kominfo_mkq.entago.utils.TimeUtils.formatDateWithTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,7 +40,7 @@ fun NotificationDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Detail Notifikasi", fontWeight = FontWeight.Bold) },
+                title = { Text("Detail Notifikasi", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
@@ -57,7 +59,7 @@ fun NotificationDetailScreen(
                         isSearching = false, // Karena ini halaman detail, bukan hasil pencarian
                         title = "Gagal Memuat Detail Notifikasi",
                         description = state.message, // Menampilkan pesan error dari ViewModel
-                        icon = androidx.compose.material.icons.Icons.Default.CloudOff
+                        icon = Icons.Default.CloudOff
                     )
                 }
                 is NotifDetailUiState.Success -> NotificationContent(state.data)
@@ -103,7 +105,7 @@ fun NotificationContent(notif: NotifDetailData) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(Icons.Default.Schedule, null, modifier = Modifier.size(16.dp), tint = Color.Gray)
-            Text(" ${notif.created_At}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Text(" ${formatDateWithTime(notif.created_At)}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             Spacer(modifier = Modifier.width(16.dp))
             Icon(Icons.Default.Person, null, modifier = Modifier.size(16.dp), tint = Color.Gray)
             Text(" ${notif.created_By}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
@@ -125,7 +127,7 @@ fun NotificationContent(notif: NotifDetailData) {
         // Status Baca (Visual saja)
         if (notif.is_Read) {
             Text(
-                text = "Dibaca pada: ${notif.read_At}",
+                text = "Dibaca pada: ${formatDateWithTime(notif.read_At)}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.secondary
             )
@@ -133,12 +135,12 @@ fun NotificationContent(notif: NotifDetailData) {
     }
 }
 
-@Composable
-fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
-        Spacer(modifier = Modifier.width(8.dp))
-        Text("$label: ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-    }
-}
+//@Composable
+//fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String) {
+//    Row(verticalAlignment = Alignment.CenterVertically) {
+//        Icon(icon, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
+//        Spacer(modifier = Modifier.width(8.dp))
+//        Text("$label: ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+//        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+//    }
+//}

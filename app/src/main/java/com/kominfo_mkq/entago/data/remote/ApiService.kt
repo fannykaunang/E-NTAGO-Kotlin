@@ -5,19 +5,30 @@ import com.kominfo_mkq.entago.data.remote.request.CheckinRequest
 import com.kominfo_mkq.entago.data.remote.request.CheckoutRequest
 import com.kominfo_mkq.entago.data.remote.request.FcmTokenRequest
 import com.kominfo_mkq.entago.data.remote.request.LoginRequest
+import com.kominfo_mkq.entago.data.remote.request.RegisterDeviceRequest
+import com.kominfo_mkq.entago.data.remote.request.RequestMigrationRequest
+import com.kominfo_mkq.entago.data.remote.request.VerifyMigrationRequest
 import com.kominfo_mkq.entago.data.remote.response.BaseResponse
 import com.kominfo_mkq.entago.data.remote.response.CheckinResponse
 import com.kominfo_mkq.entago.data.remote.response.CheckoutResponse
+import com.kominfo_mkq.entago.data.remote.response.CutiNormatifResponse
 import com.kominfo_mkq.entago.data.remote.response.DeviceMonitorResponse
+import com.kominfo_mkq.entago.data.remote.response.IzinDetailData
+import com.kominfo_mkq.entago.data.remote.response.IzinJenisResponse
 import com.kominfo_mkq.entago.data.remote.response.IzinResponse
 import com.kominfo_mkq.entago.data.remote.response.LoginResponse
+import com.kominfo_mkq.entago.data.remote.response.NotificationResponse
 import com.kominfo_mkq.entago.data.remote.response.NotificationsDetailResponse
 import com.kominfo_mkq.entago.data.remote.response.PegawaiResponse
+import com.kominfo_mkq.entago.data.remote.response.RegisterDeviceResponse
 import com.kominfo_mkq.entago.data.remote.response.RekapBulananResponse
+import com.kominfo_mkq.entago.data.remote.response.RequestMigrationResponse
 import com.kominfo_mkq.entago.data.remote.response.RiwayatResponse
+import com.kominfo_mkq.entago.data.remote.response.SubmitIzinResponse
 import com.kominfo_mkq.entago.data.remote.response.TodayCheckinResponse
 import com.kominfo_mkq.entago.data.remote.response.TugasLuarResponse
 import com.kominfo_mkq.entago.data.remote.response.TugasLuarUploadResponse
+import com.kominfo_mkq.entago.data.remote.response.VerifyMigrationResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
@@ -32,10 +43,14 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface ApiService {
+//    @POST("api/auth/login")
+//    suspend fun login(
+//        @Body request: LoginRequest
+//    ): LoginResponse
+
+    // ApiService.kt
     @POST("api/auth/login")
-    suspend fun login(
-        @Body request: LoginRequest
-    ): LoginResponse
+    suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 
     @GET("api/pegawai/{pin}")
     suspend fun getPegawai(
@@ -123,4 +138,66 @@ interface ApiService {
     suspend fun markAsRead(
         @Path("id") id: String
     ): Response<BaseResponse>
+
+    @PUT("api/pegawai/register-device")
+    suspend fun registerDevice(
+        @Body request: RegisterDeviceRequest
+    ): Response<RegisterDeviceResponse>
+
+    // ApiService.kt
+    @POST("api/pegawai/request-migration-otp")
+    suspend fun requestMigrationOtp(
+        @Body request: RequestMigrationRequest
+    ): Response<RequestMigrationResponse>
+
+//    @PUT("api/pegawai/migrate-device")
+//    suspend fun migrateDevice(
+//        @Body request: RegisterDeviceRequest, // Kita gunakan model yang sama (device_Id, device_Model, description)
+//        @Query("otp") otp: String
+//    ): Response<RegisterDeviceResponse>
+
+    @POST("api/pegawai/verify-migration-otp")
+    suspend fun verifyMigrationOtp(
+        @Body request: VerifyMigrationRequest
+    ): Response<VerifyMigrationResponse>
+
+    @GET("api/notifications")
+    suspend fun getNotifications(
+        @Query("pegawai_id") pegawaiId: String,
+        @Query("page") page: Int,
+        @Query("pageSize") pageSize: Int
+    ): NotificationResponse
+
+    @POST("api/notifications/read/{id}")
+    suspend fun markAsRead(
+        @Path("id") notificationId: Int
+    ): BaseResponse
+
+    // Ambil list Jenis & Kategori
+    @GET("api/izin/jenis-kategori")
+    suspend fun getJenisIzin(): IzinJenisResponse
+
+    // Ambil list Cuti Normatif
+    @GET("api/cuti/normatif")
+    suspend fun getCutiNormatif(): CutiNormatifResponse
+
+    // Submit Izin (Multipart)
+    @Multipart
+    @POST("api/izin")
+    suspend fun submitIzin(
+        @Part("izin_jenis_id") jenisId: RequestBody,
+        @Part("kat_izin_id") kategId: RequestBody,
+        //@Part("izin_tgl") tgl: RequestBody,
+        //@Part("izin_tgl") tglList: List<RequestBody>,
+        @Part tglList: List<MultipartBody.Part>,
+        @Part("izin_catatan") catatan: RequestBody,
+        @Part file: MultipartBody.Part?, // Bisa Null
+        @Part("izin_no_scan_time") jam: RequestBody?   // Bisa Null (untuk Group B)
+    ): SubmitIzinResponse
+
+    @GET("api/izin/pegawai/{pegId}/urutan/{urutan}")
+    suspend fun getIzinDetail(
+        @Path("pegId") pegId: Int,
+        @Path("urutan") urutan: Long
+    ): IzinDetailData
 }

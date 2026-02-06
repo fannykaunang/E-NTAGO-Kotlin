@@ -95,7 +95,7 @@ class RiwayatViewModel(
                                     val itemDate = dateParser.parse(dateString)
 
                                     if (itemDate != null) {
-                                        val itemTime = itemDate.time
+//                                        val itemTime = itemDate.time
 
                                         // Normalisasi waktu ke midnight (00:00:00)
                                         val calendar = Calendar.getInstance()

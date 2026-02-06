@@ -82,20 +82,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
-import com.kominfo_mkq.entago.data.local.PrefManager
 import com.kominfo_mkq.entago.data.remote.response.PegawaiData
 import com.kominfo_mkq.entago.ui.viewmodel.ProfileUiState
 import com.kominfo_mkq.entago.ui.viewmodel.ProfileViewModel
+import com.kominfo_mkq.entago.utils.TimeUtils.formatDate
 import com.kominfo_mkq.entago.utils.getDeviceId
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     navController: NavHostController,
     viewModel: ProfileViewModel,
-    prefManager: PrefManager,
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
@@ -651,26 +648,6 @@ fun DeviceIdItem(deviceId: String, onCopy: () -> Unit) {
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(18.dp)
             )
-        }
-    }
-}
-
-// Helper Functions
-fun formatDate(dateString: String?): String {
-    if (dateString.isNullOrEmpty()) return "-"
-    return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-        val outputFormat = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
-        val date = inputFormat.parse(dateString) ?: return dateString
-        outputFormat.format(date)
-    } catch (e: Exception) {
-        try {
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val outputFormat = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
-            val date = inputFormat.parse(dateString) ?: return dateString
-            outputFormat.format(date)
-        } catch (e: Exception) {
-            dateString
         }
     }
 }

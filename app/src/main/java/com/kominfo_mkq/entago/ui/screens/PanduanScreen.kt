@@ -28,11 +28,9 @@ import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.LockReset
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.Card
@@ -56,7 +54,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController

@@ -19,3 +19,15 @@ data class DeviceDetail(
     val status: String, // "ONLINE" atau "OFFLINE"
     val roundtripMs: Int?
 )
+
+data class RegisterDeviceResponse(
+    val success: Boolean,
+    val message: String,
+    val data: RegisterDeviceData?
+)
+
+data class RegisterDeviceData(
+    val pin: String,
+    val deviceid: String,
+    val devicemodel: String
+)

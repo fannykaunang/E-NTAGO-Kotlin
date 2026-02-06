@@ -66,7 +66,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.kominfo_mkq.entago.data.remote.RetrofitClient.BASE_URL
 import com.kominfo_mkq.entago.data.remote.response.TugasLuarData
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -86,9 +85,10 @@ fun TugasLuarDetailScreen(
         tugas.lampiranPath
     } else {
         // Jika online, gabungkan BASE_URL + path dari server
-        val baseUrl = BASE_URL.trimEnd('/')
+        //val baseUrl = BASE_URL.trimEnd('/')
         val cleanPath = tugas.lampiranPath?.trimStart('/') ?: ""
-        "$baseUrl/$cleanPath".replace(" ", "")
+//        "$baseUrl/$cleanPath".replace(" ", "")
+        cleanPath.replace(" ", "")
     }
 
     val displayDate = try {
@@ -96,13 +96,13 @@ fun TugasLuarDetailScreen(
         val outputFormat = SimpleDateFormat("EEEE, dd MMMM yyyy • HH:mm", Locale("id", "ID"))
         val date = inputFormat.parse(tugas.tanggal)
         outputFormat.format(date!!)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         tugas.tanggal // Jika gagal (data offline), tampilkan teks aslinya
     }
 
-    val baseUrl = BASE_URL.trimEnd('/')
-    val cleanPath = tugas.lampiranPath?.trimStart('/') ?: ""
-    val fullImagePath = "$baseUrl/$cleanPath".replace(" ", "")
+//    val baseUrl = BASE_URL.trimEnd('/')
+//    val cleanPath = tugas.lampiranPath?.trimStart('/') ?: ""
+//    val fullImagePath = "$baseUrl/$cleanPath".replace(" ", "")
 
     Scaffold(
         topBar = {

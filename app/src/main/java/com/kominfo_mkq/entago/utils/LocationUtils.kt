@@ -3,7 +3,7 @@ package com.kominfo_mkq.entago.utils
 import android.location.Location
 
 object LocationUtils {
-    private const val MAX_RADIUS_METERS = 10000.0
+    private const val MAX_RADIUS_METERS = 20.0
 
     fun isWithinRadius(
         userLat: Double,
@@ -18,7 +18,7 @@ object LocationUtils {
         return results[0] <= MAX_RADIUS_METERS
     }
 
-    fun isMockLocation(location: android.location.Location): Boolean {
+    fun isMockLocation(location: Location): Boolean {
         return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             location.isMock
         } else {

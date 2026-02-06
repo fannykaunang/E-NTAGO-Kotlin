@@ -2,6 +2,7 @@ package com.kominfo_mkq.entago.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +61,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
 import com.kominfo_mkq.entago.data.remote.response.IzinItem
 import com.kominfo_mkq.entago.ui.components.EmptyState
@@ -71,6 +76,32 @@ import java.util.Locale
 @Composable
 fun IzinScreen(navController: NavHostController, viewModel: IzinViewModel, isDarkMode: Boolean) {
     val uiState = viewModel.uiState
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // Cek apakah ada sinyal refresh dari halaman sebelumnya
+                val isRefreshNeeded = navController.currentBackStackEntry
+                    ?.savedStateHandle
+                    ?.get<Boolean>("refresh_flag") == true
+
+                if (isRefreshNeeded) {
+                    // Lakukan refresh data
+                    viewModel.fetchIzinList()
+
+                    // Reset sinyal agar tidak refresh terus menerus
+                    navController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("refresh_flag", false)
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     // State UI Lokal
     var isSearching by remember { mutableStateOf(false) }
@@ -121,7 +152,7 @@ fun IzinScreen(navController: NavHostController, viewModel: IzinViewModel, isDar
                         isSearching = !isSearching
                         if (!isSearching && viewModel.searchQuery.isNotEmpty()) {
                             // Opsional: Kosongkan search jika ditutup, atau biarkan filter aktif
-                            // viewModel.searchQuery = ""
+                            viewModel.searchQuery = ""
                         }
                     }) {
                         Icon(
@@ -172,7 +203,7 @@ fun IzinScreen(navController: NavHostController, viewModel: IzinViewModel, isDar
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* Navigasi ke Form Izin Baru */ },
+                onClick = { navController.navigate("izin_add") },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
@@ -223,7 +254,13 @@ fun IzinScreen(navController: NavHostController, viewModel: IzinViewModel, isDar
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 items(dataTampil) { izin ->
-                                    IzinCard(izin)
+                                    IzinCard(
+                                        item = izin,
+                                        onClick = {
+                                            // Kirim izin_Urutan (bukan izin_Id)
+                                            navController.navigate("izin_detail/${izin.izin_Urutan}")
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -306,7 +343,7 @@ fun ActiveIzinFiltersRow(
 }
 
 @Composable
-fun IzinCard(item: IzinItem) {
+fun IzinCard(item: IzinItem, onClick: () -> Unit) {
     val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
     val displayFormat = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
 
@@ -317,12 +354,12 @@ fun IzinCard(item: IzinItem) {
         } else {
             item.izin_Tgl ?: "-"
         }
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         item.izin_Tgl ?: "-"
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -410,10 +447,16 @@ fun IzinCard(item: IzinItem) {
 
                 // Status Badge
                 Spacer(modifier = Modifier.height(6.dp))
+//                val (statusText, badgeColor) = when (item.izin_Status) {
+//                    1 -> "Disetujui" to Color(0xFF43A047)
+//                    2 -> "Ditolak" to Color(0xFFE53935)
+//                    else -> "Proses" to Color(0xFFFB8C00)
+//                }
                 val (statusText, badgeColor) = when (item.izin_Status) {
-                    1 -> "Disetujui" to Color(0xFF43A047)
-                    2 -> "Ditolak" to Color(0xFFE53935)
-                    else -> "Proses" to Color(0xFFFB8C00)
+                    0 -> "Ditolak" to Color(0xFFE53935)       // Merah (Ditolak)
+                    1 -> "Disetujui" to Color(0xFF43A047)     // Hijau (Diterima)
+                    2 -> "Menunggu Review" to Color(0xFFFB8C00) // Orange (Baru/Review)
+                    else -> "Proses" to Color.Gray            // Fallback (Jika ada status lain)
                 }
 
                 Surface(

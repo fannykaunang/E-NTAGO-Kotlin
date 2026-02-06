@@ -61,7 +61,7 @@ class SettingsViewModel(private val apiService: ApiService) : ViewModel() {
                     isSuccess = false
                     onComplete(false)
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 message = "Terjadi kesalahan jaringan. Coba lagi nanti."
                 isSuccess = false
                 onComplete(false)

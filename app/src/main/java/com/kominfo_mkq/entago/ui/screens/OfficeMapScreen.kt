@@ -1,19 +1,10 @@
 package com.kominfo_mkq.entago.ui.screens
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,13 +15,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.graphics.toColorInt
 import androidx.navigation.NavHostController
 import com.kominfo_mkq.entago.data.local.PrefManager
 import org.osmdroid.config.Configuration
@@ -89,9 +79,9 @@ fun OfficeMapScreen(
 
                         // 1. TAMBAHKAN RADIUS (Polygon Lingkaran)
                         val circle = Polygon(this)
-                        circle.points = Polygon.pointsAsCircle(officePoint, 1000.0) // 100 Meter
-                        circle.fillPaint.color = android.graphics.Color.parseColor("#336A1B9A") // Ungu transparan
-                        circle.outlinePaint.color = android.graphics.Color.parseColor("#6A1B9A")
+                        circle.points = Polygon.pointsAsCircle(officePoint, 30.0) // 100 Meter
+                        circle.fillPaint.color = "#336A1B9A".toColorInt() // Ungu transparan
+                        circle.outlinePaint.color = "#6A1B9A".toColorInt()
                         circle.outlinePaint.strokeWidth = 2f
                         overlays.add(circle)
 
@@ -99,7 +89,7 @@ fun OfficeMapScreen(
                         val marker = Marker(this)
                         marker.position = officePoint
                         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                        marker.title = "Kantor/Dinas Anda"
+                        marker.title = "Kantor Anda"
                         // Gunakan ikon pin point jika ada, atau default marker
                         overlays.add(marker)
 

@@ -3,15 +3,14 @@ package com.kominfo_mkq.entago.fcm
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import com.kominfo_mkq.entago.R
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.kominfo_mkq.entago.MainActivity
+import com.kominfo_mkq.entago.R
 
 class EntagoFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
@@ -57,7 +56,7 @@ class EntagoFirebaseMessagingService : FirebaseMessagingService() {
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
 
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
         // Pastikan Channel ID dibuat jika belum ada
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
