@@ -63,6 +63,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SupportAgent
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -117,6 +119,9 @@ import com.kominfo_mkq.entago.ui.viewmodel.RiwayatViewModel
 import com.kominfo_mkq.entago.utils.LocationUtils
 import com.kominfo_mkq.entago.utils.getDeviceId
 import com.kominfo_mkq.entago.utils.openWhatsApp
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -695,12 +700,19 @@ fun CompactHeader(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "Dashboard",
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column {
+                        Text(
+                            text = "Dashboard",
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = SimpleDateFormat("EEEE, d MMM yyyy HH:mm", Locale("id", "ID")).format(Date()),
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 11.sp
+                        )
+                    }
 
                     // Device Status Badge di samping Dashboard
                     InlineDeviceStatus(isOnline = isMachineOnline)
@@ -770,8 +782,9 @@ fun CompactHeader(
 
                 is DashboardUiState.Success -> {
                     val pegawai = uiState.data
-                    //android.util.Log.d("DEBUG_NULL", "Nama: ${pegawai.pegawai_nama}")
-                    //android.util.Log.d("DEBUG_NULL", "NIP: ${pegawai.pegawai_nip}")
+                    // State untuk kontrol buka/tutup sensor NIP
+                    var isNipVisible by remember { mutableStateOf(false) }
+
                     Column {
                         Text(
                             text = pegawai.pegawai_nama ?: "-",
@@ -782,39 +795,59 @@ fun CompactHeader(
                             overflow = TextOverflow.Ellipsis
                         )
 
-                        // HAPUS InlineDeviceStatus dari sini karena sudah dipindah ke atas
-                        // Spacer(modifier = Modifier.height(8.dp))
-                        // InlineDeviceStatus(isOnline = isMachineOnline)
-
                         Spacer(modifier = Modifier.height(4.dp))
+
+                        // --- BAGIAN NIP DENGAN FITUR SENSOR & EYE ICON ---
+                        val rawNip = pegawai.pegawai_nip?.trim() ?: ""
+                        val displayNip = when {
+                            rawNip.isEmpty() -> "-"
+                            isNipVisible -> rawNip
+                            else -> {
+                                // Logika Masking: Ambil setengah karakter awal, sisanya ganti bintang
+                                val halfLength = rawNip.length / 2
+                                rawNip.take(halfLength) + "•".repeat(rawNip.length - halfLength)
+                            }
+                        }
+
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable {
-                                val nipValue = pegawai.pegawai_nip ?: ""
-                                if (nipValue.isNotEmpty()) {
-                                    clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(nipValue))
-                                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-                                        Toast.makeText(
-                                            context,
-                                            "NIP disalin ke clipboard",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                }
-                            }
                         ) {
                             Text(
-                                text = "NIP: ${pegawai.pegawai_nip ?: "-"}",
+                                text = "NIP/NIK: $displayNip",
                                 color = Color.White.copy(alpha = 0.7f),
                                 fontSize = 12.sp
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Icon(
-                                imageVector = Icons.Default.ContentCopy,
-                                contentDescription = "Salin NIP",
-                                tint = Color.White.copy(alpha = 0.5f),
-                                modifier = Modifier.size(14.dp)
-                            )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            // Tombol Mata (Show/Hide)
+                            if (rawNip.isNotEmpty()) {
+                                Icon(
+                                    imageVector = if (isNipVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = "Show/Hide NIP",
+                                    tint = Color.White.copy(alpha = 0.5f),
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clickable { isNipVisible = !isNipVisible }
+                                )
+
+                                Spacer(modifier = Modifier.width(10.dp))
+
+                                // Tombol Copy
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = "Salin NIP",
+                                    tint = Color.White.copy(alpha = 0.5f),
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .clickable {
+                                            clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(rawNip))
+                                            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                                                Toast.makeText(context, "NIP disalin", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(2.dp))
@@ -852,52 +885,20 @@ fun QuickStatsRow(checkin: String, checkout: String) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             // KOLOM DATANG
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start,
+            StatusItem(
+                label = "Datang",
+                value = checkin,
+                icon = Icons.AutoMirrored.Filled.Login,
+                iconTint = StatusApproved,
                 modifier = Modifier.weight(1f)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            Color(0xFF43A047).copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Login, // Diubah ke Login agar sesuai arti "Datang"
-                        contentDescription = null,
-                        tint = StatusApproved,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = "Datang",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = checkin,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (checkin == "--:--" || checkin.isEmpty())
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        else StatusApproved
-                    )
-                }
-            }
+            )
 
-            // PEMBATAL TENGAH
+            // PEMBATAS TENGAH
             Box(
                 modifier = Modifier
                     .width(1.dp)
@@ -906,44 +907,92 @@ fun QuickStatsRow(checkin: String, checkout: String) {
             )
 
             // KOLOM PULANG
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 12.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            StatusRejected.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ),
-                    contentAlignment = Alignment.Center
+            StatusItem(
+                label = "Pulang",
+                value = checkout,
+                icon = Icons.AutoMirrored.Filled.Logout,
+                iconTint = StatusRejected,
+                modifier = Modifier.weight(1f),
+                isEnd = true
+            )
+        }
+    }
+}
+
+@Composable
+fun StatusItem(
+    label: String,
+    value: String,
+    icon: ImageVector,
+    iconTint: Color,
+    modifier: Modifier = Modifier,
+    isEnd: Boolean = false
+) {
+    // Definisi Warna Kuning Warning (Amber)
+    val warningColor = Color(0xFFFBC02D)
+
+    // Logika Pemisahan Teks: "08:00 (Terlambat)" -> jam: "08:00", status: "(Terlambat)"
+    val hasStatus = value.contains("(")
+    val displayTime = if (hasStatus) value.substringBefore(" (").trim() else value
+    val statusText = if (hasStatus) value.substringAfter("(").replace(")", "").trim() else ""
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start,
+        modifier = modifier.padding(start = if (isEnd) 12.dp else 0.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .background(
+                    iconTint.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(10.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        Column(verticalArrangement = Arrangement.Center) {
+            Text(
+                text = label,
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium
+            )
+
+            // Jam Utama (Tetap Hijau/Merah agar kontras dengan background)
+            Text(
+                text = displayTime,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (value == "--:--" || value.isEmpty())
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                else iconTint
+            )
+
+            // Keterangan Tambahan dengan warna KUNING WARNING
+            if (statusText.isNotEmpty()) {
+                Surface(
+                    color = warningColor.copy(alpha = 0.1f), // Background sangat tipis
+                    shape = RoundedCornerShape(4.dp),
+                    modifier = Modifier.padding(top = 2.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Logout, // Tetap Logout untuk "Pulang"
-                        contentDescription = null,
-                        tint = StatusRejected,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
                     Text(
-                        text = "Pulang",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = checkout,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (checkout == "--:--" || checkout.isEmpty())
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        else StatusRejected
+                        text = statusText.uppercase(), // Dibuat Uppercase agar lebih tegas
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = warningColor, // WARNA KUNING WARNING
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }

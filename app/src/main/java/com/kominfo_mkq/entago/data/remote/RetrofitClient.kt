@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 import androidx.core.content.edit
 
 object RetrofitClient {
-    //const val BASE_URL = "http://192.168.110.236:5035/" // Real Device (ganti IP)
+    //const val BASE_URL = "https://192.168.110.236:7113/" // Real Device (ganti IP)
     const val BASE_URL = "https://entago.merauke.go.id/" // Real Device (ganti IP)
     private const val API_KEY = "f26d27b0b8a01f0390767155e17745e2"
     private var retrofit: Retrofit? = null

@@ -187,7 +187,7 @@ class DashboardViewModel(
             isAbsenLoading = true
             try {
                 val localeId = Locale("id", "ID")
-                val attIdFormatter = SimpleDateFormat("ddMMMMyyyyHHmmss", localeId)
+                val attIdFormatter = SimpleDateFormat("ddMMyyyyHHmmss", Locale.US)
                 val generatedAttId = attIdFormatter.format(Date()) + snFromServer
 
 //                val timeFormatter = SimpleDateFormat("HH:mm", localeId)
